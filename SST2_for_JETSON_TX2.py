@@ -1,5 +1,4 @@
 from datasets import load_dataset
-import evaluate
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -41,25 +40,14 @@ print("GPU name:", torch.cuda.get_device_name(0))
 
 model.to(device)
 
-accuracy_metric = evaluate.load("accuracy")
-f1_metric = evaluate.load("f1")
-precision_metric = evaluate.load("precision")
-recall_metric = evaluate.load("recall")
-
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=1)
 
-    accuracy = accuracy_metric.compute(predictions=preds, references=labels)
-    f1 = f1_metric.compute(predictions=preds, references=labels, average="binary")
-    precision = precision_metric.compute(predictions=preds, references=labels, average="binary")
-    recall = recall_metric.compute(predictions=preds, references=labels, average="binary")
+    accuracy = (preds == labels).mean()
 
     return {
-        "accuracy": accuracy["accuracy"],
-        "f1": f1["f1"],
-        "precision": precision["precision"],
-        "recall": recall["recall"],
+        "accuracy": float(accuracy)
     }
 
 train = tokenized["train"]
