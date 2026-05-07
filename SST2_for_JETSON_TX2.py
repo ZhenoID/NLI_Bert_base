@@ -1,4 +1,3 @@
-import pandas as pd
 from datasets import load_dataset
 import evaluate
 from transformers import (
@@ -9,6 +8,7 @@ from transformers import (
     DataCollatorWithPadding,
 )
 import numpy as np
+import torch
 
 dataset = load_dataset("glue", "sst2")
 print(dataset["train"][0])
@@ -29,6 +29,17 @@ model = AutoModelForSequenceClassification.from_pretrained(
     "bert-base-uncased",
     num_labels=2
 )
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+if device.type != "cuda":
+    raise RuntimeError("CUDA GPU is not available. Stop the process.")
+
+print("CUDA available:", torch.cuda.is_available())
+print("Using device:", device)
+print("GPU name:", torch.cuda.get_device_name(0))
+
+model.to(device)
 
 accuracy_metric = evaluate.load("accuracy")
 f1_metric = evaluate.load("f1")
@@ -55,11 +66,11 @@ train = tokenized["train"]
 val = tokenized["validation"]
 
 training_args = TrainingArguments(
-    output_dir="./bert_sst2_full_dataset_3epochs",
-    eval_strategy="epoch",
+    output_dir="./bert_sst2_full_dataset_1epoch",
+    evaluation_strategy="epoch",
     save_strategy="epoch",
     logging_strategy="steps",
-    logging_steps=100,
+    logging_steps=1000,
     per_device_train_batch_size=8,
     per_device_eval_batch_size=8,
     num_train_epochs=1,
@@ -76,11 +87,9 @@ trainer = Trainer(
     args=training_args,
     train_dataset=train,
     eval_dataset=val,
-    processing_class=tokenizer,
+    tokenizer=tokenizer,
     data_collator=data_collator,
     compute_metrics=compute_metrics,
 )
 
 trainer.train()
-results = trainer.evaluate(eval_dataset=val)
-print("Validation results:", results)
